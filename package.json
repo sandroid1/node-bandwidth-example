@@ -1,0 +1,24 @@
+{
+  "name": "node-bandwidth-example",
+  "version": "1.0.0",
+  "description": "Demo of using Catapult api",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bandwidthcom/node-bandwidth-example.git"
+  },
+  "author": "Bandwidth",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bandwidthcom/node-bandwidth-example/issues"
+  },
+  "homepage": "https://github.com/bandwidthcom/node-bandwidth-example",
+  "dependencies": {
+    "bandwidth": "^1.0.0",
+    "debug": "^2.1.0",
+    "express": "^4.10.6"
+  }
+}
