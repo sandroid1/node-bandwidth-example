@@ -18,6 +18,7 @@
   "homepage": "https://github.com/bandwidthcom/node-bandwidth-example",
   "dependencies": {
     "bandwidth": "^1.0.0",
+    "body-parser": "^1.10.0",
     "debug": "^2.1.0",
     "express": "^4.10.6"
   }

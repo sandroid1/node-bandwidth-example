@@ -2,6 +2,7 @@
 var express = require("express");
 var bandwidth = require("bandwidth");
 var debug = require("debug")("chaosConference");
+var bodyParser = require("body-parser");
 
 var Call = bandwidth.Call;
 var Conference = bandwidth.Conference;
@@ -10,6 +11,19 @@ var conferenceId = null;
 var client = null;
 var app = express();
 
+var ordinals = ["", "first", "second", "third", "fourth", "fifth"];
+var toOrdinalNumber = function(count){
+  if (count >= ordinals.length)
+  {
+    return count + "th";
+  }
+  return ordinals[count];
+};
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
 debug("Reading options");
 var options = require("./options.json");
 
@@ -27,7 +41,7 @@ app.post("/start/demo", function(req, res, next){
   if(!req.body.to){
     return res.send(400, "number is required");
   }
-  var callbackUrl = "http://" + options.domain + "/events/" + (conferenceId  ? "first_member" : "other_call_events");
+  var callbackUrl = "http://" + options.domain + "/events/" + (conferenceId  ? "other_call_events" :  "first_member" );
   Call.create(client, {
       from: options.conferenceNumber,
       to: req.body.to,
@@ -55,7 +69,9 @@ app.post("/events/first_member", function(req, res, next){
   };
   switch(ev.eventType){
     case "answer":
-      call.speakSentence(client, "Welcome to the conference", done);
+      setTimeout(function(){
+        call.speakSentence("Welcome to the conference", done);
+      }, 3000);
       break;
     case "speak":
       if (ev.status != "done" || ev.tag == "notification"){
@@ -70,7 +86,7 @@ app.post("/events/first_member", function(req, res, next){
           return next(err);
         }
         conference.createMember({
-          callId: call.Id,
+          callId: call.id,
           joinTone: true,
           leavingTone: true
         }, done);
@@ -146,13 +162,30 @@ app.post("/events/conference", function(req, res, next){
     case "conference":
       if (ev.status == "created")
       {
-        conferenceId =  ev.ConferenceId;
+        conferenceId =  ev.conferenceId;
       }
       else
       {
         conferenceId = null;
       }
       done();
+      break;
+    case "conference-member":
+      if (ev.state != "active" || ev.activeMembers < 2) {
+        return done(null); //don't speak anything to conference owner (first member)
+      }
+      conference.getMember(ev.memberId, function(err, member){
+        if(err){
+          return next(err);
+        }
+        member.playAudio({
+          gender: "female",
+          locale: "en_US",
+          voice: "kate",
+          sentence: "You are the " + toOrdinalNumber(ev.activeMembers) + " caller to join the conference",
+          tag: "notification"
+        }, done);
+      });
       break;
     default:
       debug("Unhandled event type %s for %s", ev.eventType, req.url);
