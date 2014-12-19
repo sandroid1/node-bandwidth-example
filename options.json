@@ -3,5 +3,7 @@
   "apiToken": "",
   "apiSecret": "",
   "conferenceNumber": "",
-  "domain": ""
+  "domain": "",
+  "caller": "",
+  "bridgeCallee": ""
 }
