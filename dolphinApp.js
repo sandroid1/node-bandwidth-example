@@ -62,7 +62,7 @@ app.post("/events/demo", function(req, res, next){
     case "answer":
       setTimeout(function(){
         call.speakSentence("hello flipper", "hello-state", done);
-      }, 3000);
+      }, 1000);
       break;
     case "speak":
       if (ev.status != "done"){
@@ -74,7 +74,7 @@ app.post("/events/demo", function(req, res, next){
             from: options.caller,
             to: options.bridgeCallee,
             callbackUrl: "http://" + options.domain + "/events/bridged",
-            tag: "other-leg:" + call.Id
+            tag: "other-leg:" + call.id
           }, done);
           break;
         case "terminating":
