@@ -1,6 +1,6 @@
 "use strict";
 var express = require("express");
-var bandwidth = require("bandwidth");
+var bandwidth = require("node-bandwidth");
 var debug = require("debug")("chaosConference");
 var bodyParser = require("body-parser");
 
