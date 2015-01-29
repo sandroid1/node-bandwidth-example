@@ -1,7 +1,7 @@
 "use strict";
 var express = require("express");
 var bandwidth = require("node-bandwidth");
-var debug = require("debug")("chaosConference");
+var debug = require("debug")("dolphinApp");
 var bodyParser = require("body-parser");
 
 var Call = bandwidth.Call;
@@ -177,5 +177,5 @@ app.post("/events/bridged", function(req, res, next){
 client = new bandwidth.Client(options);
 
 debug("Starting the web app");
-app.listen(process.env.PORT || 3000);
+app.listen(process.env.PORT || 3000, "0.0.0.0");
 
