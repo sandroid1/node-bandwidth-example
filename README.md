@@ -50,7 +50,7 @@ curl -d '{"to": "+YOUR-NUMBER"}' http://YOUR-DOMAIN/start/demo --header "Content
 
 For Chaos conference run this command again with another number to it to the conference (first member is owner)
 
-Fo Sip app open home page in browser first (http://<domain>)  and follow instructions on it
+For Sip app open home page in browser first (http://domain)  and follow instructions on it
 
 ### Deploy on heroku
 
