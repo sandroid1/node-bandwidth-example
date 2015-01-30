@@ -1,6 +1,6 @@
 "use strict";
 var express = require("express");
-var sync = require("async");
+var async = require("async");
 var bandwidth = require("node-bandwidth");
 var debug = require("debug")("sipApp");
 var bodyParser = require("body-parser");
@@ -14,7 +14,7 @@ var Domain = bandwidth.Domain;
 
 var APPLICATION_NAME = "SipApp Demo";
 var DOMAIN_NAME = "sip-app";
-var USER_NAME = "test-user";
+var USER_NAME = "n-user";
 
 var client = null;
 var app = express();
@@ -28,7 +28,7 @@ var options = require("./options.json");
 
 
 var application, phoneNumbers, domain, endpoint;
-var caller, phoneNumberForIncomimgCalls;
+var caller, phoneNumberForIncomingCalls;
 
 function getOrCreateApplication(callback){
   Application.list(client, function(err, apps){
@@ -37,7 +37,7 @@ function getOrCreateApplication(callback){
     }
     application = (apps || []).filter(function(a){return a.name === APPLICATION_NAME;})[0];
     if(!application){
-      var callback = "http://" + options.domain + "/events/calls";
+      var callbackUrl = "http://" + options.domain + "/events/calls";
       Application.create(client, {name: APPLICATION_NAME , incomingCallUrl:  callbackUrl, autoAnswer: false}, function(err, app){
         if(err){
           return callback(err);
@@ -103,14 +103,7 @@ function getOrCreateNumbers(callback){
 }
 
 function getOrCreateEndPoint(callback){
-  domain.getEndPoints(function(err, endpoints){
-    if(err){
-      return callback(err);
-    }
-    endpoint = (endpoints || []).filter(function(p){ return p.name === USER_NAME && p.applicationId === application.id; })[0];
-    if(endpoint){
-      return callback();
-    }
+  var createEndPoint = function(cb){
     domain.createEndPoint({
       name: USER_NAME,
       description: USER_NAME + " mobile client",
@@ -120,11 +113,21 @@ function getOrCreateEndPoint(callback){
       credentials: {password: "1234567890"}
     }, function(err, point){
       if(err){
-        return callback(err);
-        endpoint = point;
-        callback();
+        return cb(err);
       }
+      endpoint = point;
+      cb();
     });
+  };
+  domain.getEndPoints(function(err, endpoints){
+    if(err){
+      return callback(err);
+    }
+    endpoint = (endpoints || []).filter(function(p){ return p.name === USER_NAME && p.applicationId === application.id; })[0];
+    if(endpoint){
+      return callback();
+    }
+    createEndPoint(callback);
   });
 }
 
@@ -135,7 +138,7 @@ function handleDemo(ev, callback){
       var call = new Call();
       call.id = ev.callId;
       call.client = client;
-      call.speakSentence("Hello SIP client", callback);
+      call.speakSentence("Hello SIP client", "", callback);
       break;
     case "speak":
       if (ev.status != "done") {
@@ -144,7 +147,7 @@ function handleDemo(ev, callback){
       var call = new Call();
       call.id = ev.callId;
       call.client = client;
-      call.hangup(callback);
+      call.hangUp(callback);
       break;
     default:
       debug("Unhandled event of type %s in /events/demo", ev.eventType);
@@ -159,15 +162,17 @@ function handleCalls(ev, callback){
     call.id = ev.callId;
     call.client = client;
     var callbackUrl = "http://" + options.domain + "/events/bridged";
-    if (ev.from === entrypoint.sipUri)
+    if (ev.from === endpoint.sipUri)
     {
+      debug("Calling from sip client");
       return call.answerOnIncoming(function(){
         Call.create(client, {from: caller, to: ev.to, callbackUrl: callbackUrl, tag: ev.callId}, callback);
       });
     }
     if (ev.to === phoneNumberForIncomingCalls) {
+      debug("Calling to number %s", phoneNumberForIncomingCalls);
       return call.answerOnIncoming(function(){
-        Call.create(client, {from: caller, to: entrypoint.sipUri, callbackUrl: callbackUrl, tag: ev.callId}, callback);
+        Call.create(client, {from: caller, to: endpoint.sipUri, callbackUrl: callbackUrl, tag: ev.callId}, callback);
       });
     }
   }
@@ -197,7 +202,7 @@ app.get("/", function(req, res){
         return res.send(err.message);
       }
       caller = phoneNumbers[0].number;
-      phoneNumberForIncomimgCalls = phoneNumbers[1].number;
+      phoneNumberForIncomingCalls = phoneNumbers[1].number;
       res.send("This app is ready to use<br/>" +
        "Please configure your sip phone with account <b>" + endpoint.credentials.username + "</b>, server <b>" +
        endpoint.credentials.realm + "</b> and password <b>1234567890</b>." +
@@ -206,7 +211,7 @@ app.get("/", function(req, res){
       "<li>Press this button to check incoming call to sip client directly" +
       "<form action=\"/callToSip\" method=\"POST\"><input type=\"submit\" value=\"Call to sip client\"></input></form></li>" +
       "<li>Call from sip client to any number. Outgoing call will be maden from <b>" + caller + "</b></li>" +
-      "<li>Call from any phone (except sip client) to <b>" + phoneNumberForIncomimgCalls + "</b>. Incoming call will be redirected to sip client.</li>" +
+      "<li>Call from any phone (except sip client) to <b>" + phoneNumberForIncomingCalls + "</b>. Incoming call will be redirected to sip client.</li>" +
       "</ol>");
     });
   }
