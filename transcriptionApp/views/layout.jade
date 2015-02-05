@@ -1,0 +1,33 @@
+doctype html
+html
+  head
+    title= title
+    meta(charset='utf-8')
+    meta(http-equiv='X-UA-Compatible', content='IE=edge, chrome=1')
+    meta(name='viewport', content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
+    link(rel='stylesheet', href='/css/app.styles.min.css')
+  body
+    nav.navabar.navbar-default(role='navigation')
+      .container
+        .navbar-header
+          a.navbar-brand(href='/') Transcriptions
+        if typeof user !== 'undefined'
+          ul.nav.navbar-nav.navbar-right
+            li.dropdown
+              a(href='#', data-toggle='dropdown', role='button', aria-expanded='false').dropdown-toggle  
+                span.glyphicon.glyphicon-user
+                span #{' ' + user.email} / #{user.phoneNumber + ' '}
+                span.caret
+              ul(role='menu').dropdown-menu
+                li
+                  a(href='/signOut') Sign out
+
+    if typeof error !== 'undefined'
+      .alert.alert-danger= error 
+    if typeof info !== 'undefined'
+      .alert.alert-info= info
+    .container
+      block content
+    if settings.env == 'development'
+      script(src='http://localhost:35729/livereload.js')
+    script(src='/js/app.min.js')

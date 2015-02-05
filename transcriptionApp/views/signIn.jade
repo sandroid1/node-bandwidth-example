@@ -1,0 +1,15 @@
+extends layout
+
+block content
+  form(action="/signIn", method="POST", role="form").col-sm-6.col-sm-offset-3
+    legend Sign in
+    div.form-group
+      label Email or phone number
+      input(type="text", name="emailOrPhone", value=(typeof emailOrPhone === 'undefined')?'':emailOrPhone, required, autofocus).form-control
+    div.form-group
+      label Password
+      input(type="password", name="password", required).form-control
+    div.form-group
+      input(type="submit", value="Sign In").btn.btn-primary
+    hr
+    a(href="/signUp") Sign up
