@@ -17,7 +17,7 @@ var userSchema = new Schema({
 userSchema.methods.playGreeting = function(call, callback){
   var data = {tag: 'greeting'};
   if(this.greeting){
-    data.fileUrl = this.greating;
+    data.fileUrl = this.greeting;
   }
   else{
     data.gender = 'female';

@@ -92,7 +92,7 @@ exports.call = function(req, res){
     req.flash('error', 'Missing phone number');
     return res.redirect('/');
   }
-  bandwidth.Call.create({
+  bandwidth.Call.create(req.client, {
     from: req.user.phoneNumber,
     to: req.body.phoneNumber,
     callbackUrl: req.makeAbsoluteUrl('/events/admin')
@@ -100,7 +100,10 @@ exports.call = function(req, res){
     if(err){
       req.flash('error', err.message);
     }
-    req.redirect('/');
+    else{
+      req.flash('info', 'Please answer a call');
+    }
+    res.redirect('/');
   });
 };
 

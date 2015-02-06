@@ -61,6 +61,7 @@ function sendEventResponse(req, res){
 
 function handleEventError(err, req, res, next){
   console.error("Error on handling event on %s: %s", req.url, err.message);
+  console.log(err.stack);
   res.send('');
 }
 

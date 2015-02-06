@@ -9,7 +9,7 @@ function saveCallId(req, field, callback){
       return callback(err);
     }
     if(!user){
-      return callback(new Error("Unknown phone number " + req.body[field]));
+      return callback();
     }
     req.user = user;
     req.User.update({_id: user.id}, {'$push': {'activeCallIds': req.body.callId}}, callback);
@@ -23,27 +23,27 @@ function removeCallId(req, callback){
   req.User.update({_id: req.user.id},  {'$pull': {'activeCallIds': req.body.callId}}, callback);
 }
 
-function playMenu(call, prompt, tag, callback){
-  call.createGather({
-    tag: tag,
-    maxDigits: 1,
-    prompt: {
-      locale: 'en_US',
-      gender: 'female',
-      sentence: prompt,
-      voice: 'kate',
-      bargeable: true,
-      loopEnabled: false
-    }
-  }, callback);
-}
 
-module.exports.admin = function(req, res){
+module.exports.admin = function(req, res, next){
   debug('admin: %j', req.body);
   var call = new bandwidth.Call();
   call.client = req.client;
   call.id = req.body.callId;
-  var menu = playMenu.bind(null, call);
+  var menu = function (prompt, tag, callback){
+    call.createGather({
+      tag: tag,
+      maxDigits: 1,
+      prompt: {
+        locale: 'en_US',
+        gender: 'female',
+        sentence: prompt,
+        voice: 'kate',
+        bargeable: true,
+        loopEnabled: false
+      }
+    }, callback);
+  };
+
   var mainMenu = function(callback){
     menu('Press 1 to listen to your voicemail. Press 2 to record a new greeting.', 'main-menu', callback);
   };
@@ -68,11 +68,16 @@ module.exports.admin = function(req, res){
         if(err){
           return next(err);
         }
-        mainMenu(next);
+        if(!req.user){
+          return call.hangUp(next);
+        }
+        setTimeout(function(){
+          mainMenu(next);
+        }, 2000);
       });
       break;
     case 'hangup':
-      removeCallId(next);
+      removeCallId(req, next);
       break;
     case 'gather':
       if(req.body.state != 'completed'){
@@ -94,7 +99,7 @@ module.exports.admin = function(req, res){
               playVoiceMailMessage(req.user.voiceMessages.length - 1, next);
               break;
             case '2':
-              voiceMailMenu();
+              voiceMailMenu(next);
               break;
             default:
               mainMenu(next);
@@ -164,7 +169,7 @@ module.exports.admin = function(req, res){
           });
           break;
         case 'listen-to-recording':
-          req.user.playGreeting(function(err){
+          req.user.playGreeting(call, function(err){
             if(err){
               return next(err);
             }
@@ -205,13 +210,18 @@ module.exports.admin = function(req, res){
       if(req.body.state !== 'complete') {
         return next();
       }
-      req.user.greeting = req.body.recordingUri;
-      req.user.save(next);
+      bandwidth.Recording.get(req.client, req.body.recordingId, function(err, recording){
+        if(err){
+          return next(err);
+        }
+        req.user.greeting = recording.media;
+        req.user.save(next);
+      });
       break;
   }
 };
 
-module.exports.externalCall = function(req, res){
+module.exports.externalCall = function(req, res, next){
   debug('externalCall: %j', req.body);
   var call = new bandwidth.Call();
   call.client = req.client;
@@ -326,7 +336,7 @@ module.exports.externalCall = function(req, res){
               return callback(err);
             }
             req.sendEmail(user.email, 'TranscriptionApp - new voice message from ' + from,
-                '<p>You received a new voice message from <b>' + from +'</b> at ' + moment(recording.startTime).format('l') + ':</p>' +
+                '<p>You received a new voice message from <b>' + from +'</b> at ' + moment(recording.startTime).format('LLL') + ':</p>' +
                 '<p><pre>' + req.body.text + '</pre></p>' +
                 '<p>Click this link to read full text</p>' +
                 '<p><a href="' + req.body.textUrl + '">' + req.body.textUrl + '</a></p>' +
