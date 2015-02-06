@@ -12,9 +12,9 @@ var indexRouter = express.Router();
 
 
 function saveReturnUrlIfNeed(req, res, next){
-  if(req.query.next){
+  if(req.query && req.query.next){
     debug('Save url to return %s', req.query.next);
-    res.session.returnUrl = req.query.next || '/';
+    req.session.returnUrl = req.query.next || '/';
   }
   next();
 }

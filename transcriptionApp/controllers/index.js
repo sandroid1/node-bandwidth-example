@@ -60,7 +60,7 @@ exports.signUp = function(req, res, next){
       if(numbers.length === 0){
         return callback(new Error('Missing free phone numbers. Sorry.'));
       }
-      bandwidth.PhoneNumber.create(req.client, {number: numbers[0].number}, callback);
+      bandwidth.PhoneNumber.create(req.client, {number: numbers[0].number, applicationId: req.getApplicationId()}, callback);
     },
     function(reservedNumber, callback){
       var user = new req.User({email: req.body.email, phoneNumber: reservedNumber.number, password: req.body.password});
@@ -95,7 +95,7 @@ exports.call = function(req, res){
   bandwidth.Call.create({
     from: req.user.phoneNumber,
     to: req.body.phoneNumber,
-    callbackUrl: req.makeAbdoluteUrl('/events/admin')
+    callbackUrl: req.makeAbsoluteUrl('/events/admin')
   }, function(err){
     if(err){
       req.flash('error', err.message);

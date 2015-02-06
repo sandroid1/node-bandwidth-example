@@ -1,6 +1,7 @@
 var debug = require('debug')('events');
 var bandwidth = require('node-bandwidth');
 var moment = require('moment');
+var async = require('async');
 
 function saveCallId(req, field, callback){
   req.User.findOne({phoneNumber: req.body[field]}, function(err, user){
@@ -11,9 +12,7 @@ function saveCallId(req, field, callback){
       return callback(new Error("Unknown phone number " + req.body[field]));
     }
     req.user = user;
-    user.activeCallIds.push(req.body.callId);
-    user.markModified('activeCallIds');
-    user.save(callback);
+    req.User.update({_id: user.id}, {'$push': {'activeCallIds': req.body.callId}}, callback);
   });
 }
 
@@ -21,13 +20,7 @@ function removeCallId(req, callback){
   if(!req.user){
     return callback();
   }
-  var index = req.user.activeCallIds.indexOf(req.body.callId);
-  if(index < 0){
-    return callback();
-  }
-  req.user.activeCallIds.splice(index, 1);
-  req.user.markModified('activeCallIds');
-  req.user.save(callback);
+  req.User.update({_id: req.user.id},  {'$pull': {'activeCallIds': req.body.callId}}, callback);
 }
 
 function playMenu(call, prompt, tag, callback){
@@ -137,9 +130,7 @@ module.exports.admin = function(req, res){
               playVoiceMailMessage(index - 1, next);
               break;
             case '2':
-              req.user.voiceMessages.splice(index, 1);
-              req.user.markModified('voiceMessages');
-              req.user.save(function(err){
+              req.User.update({_id: req.user.id}, {'$pull': {'voiceMessages': {'url': req.user.voiceMessages[index].url}}}, function(err){
                 if(err){
                   return next(err);
                 }
@@ -152,75 +143,198 @@ module.exports.admin = function(req, res){
           }
           break;
       }
-  case 'playback':
-    if(req.body.status != 'done'){
-      return next();
-    }
-    var tag = (req.body.tag || '').split(':');
-    switch(tag[0]){
-      case 'start-recording':
-        call.recordingOn(function(err){
-          if(err){
-            return next(err);
-          }
-          call.createGather({
-            tag: 'recording',
-            interDigitTimeout: 30,
-            maxDigits: 30,
-            terminatingDigits: '#'
+    case 'playback':
+    case 'speak':
+      if(req.body.status != 'done'){
+        return next();
+      }
+      var tag = (req.body.tag || '').split(':');
+      switch(tag[0]){
+        case 'start-recording':
+          call.recordingOn(function(err){
+            if(err){
+              return next(err);
+            }
+            call.createGather({
+              tag: 'recording',
+              interDigitTimeout: 30,
+              maxDigits: 30,
+              terminatingDigits: '#'
+            }, next);
+          });
+          break;
+        case 'listen-to-recording':
+          req.user.playGreeting(function(err){
+            if(err){
+              return next(err);
+            }
+            voiceMailMenu(next);
+          });
+          break;
+        case 'remove-recording':
+          req.user.greeting = null;
+          req.user.save(function(err){
+            if(err){
+              return next(err);
+            }
+            voiceMailMenu(next);
+          });
+          break;
+        case 'stop-recording':
+          voiceMailMenu(next);
+          break;
+        case 'main-menu':
+          mainMenu(next);
+          break;
+        case 'voice-message-date':
+          index = Number(tag[1]);
+          call.playAudio({
+            fileUrl: req.user.voiceMessages[index].url,
+            tag: 'voice-message-url:' + index
           }, next);
-        });
-        break;
-      case 'listen-to-recording':
-        req.user.playGreating(function(err){
-          if(err){
-            return next(err);
-          }
-          voiceMailMenu(next);
-        });
-        break;
-      case 'remove-recording':
-        req.user.greeting = null;
-        req.user.save(function(err){
-          if(err){
-            return next(err);
-          }
-          voiceMailMenu(next);
-        });
-        break;
-      case 'stop-recording':
-        voiceMailMenu(next);
-        break;
-      case 'main-menu':
-        mainMenu(next);
-        break;
-      case 'voice-message-date':
-        index = Number(tag[1]);
-        call.playAudio({
-          fileUrl: req.user.voiceMessages[index].url,
-          tag: 'voice-message-url:' + index
-        }, next);
-        break;
-      case 'voice-message-url':
-        index = Number(tag[1]);
-        setTimeout(function(){
-          voiceMessageMenu(index, next);
-        }, 1500);
-        break;
-    }
-    break;
-  case 'recording':
-    if(req.body.state !== 'complete') {
-      return next();
-    }
-    req.user.greeting = req.body.recordingUri;
-    req.user.save(next);
-    break;
-}
-
-
+          break;
+        case 'voice-message-url':
+          index = Number(tag[1]);
+          setTimeout(function(){
+            voiceMessageMenu(index, next);
+          }, 1500);
+          break;
+      }
+      break;
+    case 'recording':
+      if(req.body.state !== 'complete') {
+        return next();
+      }
+      req.user.greeting = req.body.recordingUri;
+      req.user.save(next);
+      break;
+  }
 };
 
 module.exports.externalCall = function(req, res){
-
+  debug('externalCall: %j', req.body);
+  var call = new bandwidth.Call();
+  call.client = req.client;
+  call.id = req.body.callId;
+  switch(req.body.eventType){
+    case 'incomingcall':
+      saveCallId(req, 'to', function(err){
+        if(err){
+          return next(err);
+        }
+        if(!req.user){
+          return call.rejectIncoming(next);
+        }
+        call.answerOnIncoming(next);
+      });
+      break;
+    case 'answer':
+      if(!req.user){
+        return call.hangUp(next);
+      }
+      req.user.playGreeting(call, next);
+      break;
+    case 'hangup':
+      removeCallId(req, function(err){
+        if(err){
+          return next(err);
+        }
+        if(req.user){
+          call.recordingOff(next);
+        }
+        else{
+          next();
+        }
+      });
+      break;
+    case 'playback':
+    case 'speak':
+      if(req.body.status != 'done'){
+        return next();
+      }
+      switch(req.body.tag){
+        case 'greeting':
+          call.playAudio({fileUrl: req.makeAbsoluteUrl('/beep.mp3'), tag: 'start-recording' }, next);
+          break;
+        case 'start-recording':
+          call.recordingOn(function(err){
+            if(err){
+              return next(err);
+            }
+            call.createGather({
+              tag: 'stop-recording',
+              interDigitTimeout: 30,
+              maxDigits: 1
+            }, next);
+          });
+          break;
+      }
+      break
+    case 'gather':
+      if(req.body.state != 'completed'){
+        return next(err);
+      }
+      if(req.body.tag == 'stop-recording'){
+        call.hangUp(next);
+      }
+      break;
+    case 'recording':
+      if(req.body.state !== 'complete') {
+        return next();
+      }
+      var recording = new bandwidth.Recording();
+      recording.client = req.client;
+      recording.id = req.body.recordingId;
+      recording.createTranscription(function(err, transcription){
+        if(err){
+          return next(err);
+        }
+        bandwidth.Call.get(req.body.callId, function(err, call){
+          if(err){
+            return next(err);
+          }
+          req.User.update({_id: req.user.id}, {'$push': {'activeTranscriptions': {id: transcription.id, from: call.from}}}, next);
+        });
+      });
+      break;
+    case 'transcription':
+      if(req.body.state !== 'completed'){
+        return next();
+      }
+      async.waterfall([
+        function(callback){
+          req.User.findOne({'activeTranscriptions.id': req.body.transcriptionId}, callback);
+        },
+        function(user, callback){
+          if(!user){
+            return callback(new Error('Unknown transcription'));
+          }
+          bandwidth.Recording.get(req.client, req.body.recordingId, function(err, recording){
+            if(err){
+              return callback(err);
+            }
+            callback(null, user, recording);
+          });
+        },
+        function(user, recording, callback){
+          var from = user.activeTranscriptions.filter(function(t){ return t.id === req.body.transcriptionId; })[0].from;
+          req.User.update({_id: user.id}, {
+            '$pull': {'activeTranscriptions': {id: req.body.transcriptionId}},
+            '$push': {'voiceMessages': {url: recording.media, startTime: recording.startTime, endTime: recording.endTime}}
+          }, function(err){
+            if(err){
+              return callback(err);
+            }
+            req.sendEmail(user.email, 'TranscriptionApp - new voice message from ' + from,
+                '<p>You received a new voice message from <b>' + from +'</b> at ' + moment(recording.startTime).format('l') + ':</p>' +
+                '<p><pre>' + req.body.text + '</pre></p>' +
+                '<p>Click this link to read full text</p>' +
+                '<p><a href="' + req.body.textUrl + '">' + req.body.textUrl + '</a></p>' +
+                '<p>Click this link to listen to this message</p>' +
+                '<p><a href="' + recording.media + '">' + recording.media + '</a></p>', callback);
+          });
+        }
+      ], next);
+      break;
+  }
 };
