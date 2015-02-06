@@ -1,12 +1,7 @@
 var async = require('async');
 var bandwidth = require('node-bandwidth');
 exports.index = function (req, res) {
-  if(req.session.userId){
-    res.render('index');
-  }
-  else{
-    res.redirect('/signIn');
-  }
+  res.render('index');
 };
 
 exports.signInForm = function(req, res){
@@ -90,3 +85,23 @@ exports.signOut = function(req, res){
   delete req.session.userId;
   res.redirect('/signIn');
 };
+
+
+exports.call = function(req, res){
+  if(!req.body.phoneNumber){
+    req.flash('error', 'Missing phone number');
+    return res.redirect('/');
+  }
+  bandwidth.Call.create({
+    from: req.user.phoneNumber,
+    to: req.body.phoneNumber,
+    callbackUrl: req.makeAbdoluteUrl('/events/admin')
+  }, function(err){
+    if(err){
+      req.flash('error', err.message);
+    }
+    req.redirect('/');
+  });
+};
+
+exports.events = require('./events');

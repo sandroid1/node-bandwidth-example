@@ -50,7 +50,9 @@ app
     req.client = client;
     res.locals.error = req.flash('error')[0];
     res.locals.info = req.flash('info')[0];
-    debug('Locals: %j', res.locals);
+    req.makeAbdoluteUrl = function(path){
+      return (config.baseUrl || ('http://localhost:' + app.get('port'))) + path;
+    };
     if(req.session.userId){
       User.findById(req.session.userId, function(err, user){
         if(err){

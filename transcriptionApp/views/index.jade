@@ -1,6 +1,10 @@
 extends layout
 
 block content
-  h1 Welcome
-  pre #{JSON.stringify(user.toJSON(), null, 2)}
+  form(action='/call', method='POST').form-inline
+    .form-group
+      .input-group
+        input(name='phoneNumber', placeholder='Number to call back from #{user.phoneNumber}').form-control
+        span.input-group-btn
+          button(type='submit').btn.btn-default Call
 

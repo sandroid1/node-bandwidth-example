@@ -23,6 +23,21 @@ function redirectToReturnUrl(req, res, next){
   res.redirect(req.session.returnUrl || '/'); //validate this url in real apps!!!
 }
 
+function getUserByCallId(req, res, next){
+  if(req.body && req.body.callId){
+    req.User.findOne({activeCallIds: req.body.callId}, function(err, user){
+      if(err){
+        return next(err);
+      }
+      req.user = user;
+      next();
+    });
+  }
+  else{
+    next();
+  }
+}
+
 function handleError(view){
   return function(err, req, res, next){
     debug('showing an error: %s', err.message);
@@ -31,9 +46,26 @@ function handleError(view){
   };
 }
 
+function authOnly(req, res, next){
+  if(req.user){
+    next();
+  }
+  else{
+    res.redirect('/signIn?next=' + encodeURIComponent(req.url));
+  }
+}
+
+function sendEventResponse(req, res){
+  res.send('');
+}
+
+function handleEventError(err, req, res, next){
+  console.error("Error on handling event on %s: %s", req.url, err.message);
+  res.send('');
+}
 
 indexRouter.route('/')
-  .get(controllers.index);
+  .get(authOnly, controllers.index);
 
 indexRouter.route('/signIn')
   .get(saveReturnUrlIfNeed, controllers.signInForm)
@@ -45,4 +77,14 @@ indexRouter.route('/signUp')
 
 indexRouter.route('/signOut')
   .get(controllers.signOut);
+
+indexRouter.route('/call')
+  .post(authOnly, controllers.call);
+
+indexRouter.route('/events/admin')
+  .post(getUserByCallId,  controllers.events.admin, sendEventResponse, handleEventError);
+
+indexRouter.route('/events/externalCall')
+  .post(getUserByCallId, controllers.events.externalCall, sendEventResponse, handleEventError);
+
 exports.indexRouter = indexRouter;
