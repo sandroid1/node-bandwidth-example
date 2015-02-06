@@ -10,7 +10,7 @@ var userSchema = new Schema({
   greeting: String,
   voiceMessages: [{url: String, startTime: Date, endTime: Date}],
   activeCallIds: {type: [String], index: true},
-  activeTranscriptions: [{id: {type: [String], index: true}, from: String}]
+  activeTranscriptions: [{id: {type: String, index: true}, from: String}]
 });
 
 

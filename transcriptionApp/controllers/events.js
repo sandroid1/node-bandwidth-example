@@ -244,19 +244,9 @@ module.exports.externalCall = function(req, res, next){
       }
       req.user.playGreeting(call, next);
       break;
-    case 'hangup':
-      removeCallId(req, function(err){
-        if(err){
-          return next(err);
-        }
-        if(req.user){
-          call.recordingOff(next);
-        }
-        else{
-          next();
-        }
-      });
-      break;
+//    case 'hangup':
+//      removeCallId(req, next);
+//      break;
     case 'playback':
     case 'speak':
       if(req.body.status != 'done'){
@@ -299,10 +289,11 @@ module.exports.externalCall = function(req, res, next){
         if(err){
           return next(err);
         }
-        bandwidth.Call.get(req.body.callId, function(err, call){
+        bandwidth.Call.get(req.client, req.body.callId, function(err, call){
           if(err){
             return next(err);
           }
+          debugger;
           req.User.update({_id: req.user.id}, {'$push': {'activeTranscriptions': {id: transcription.id, from: call.from}}}, next);
         });
       });
