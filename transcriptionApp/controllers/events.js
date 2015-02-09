@@ -52,15 +52,15 @@ module.exports.admin = function(req, res, next){
   };
 
   var voiceMessageMenu = function(index, callback){
-    menu('Press 1 to go to the next voice mail. Press 2 to delete this voice mail.' +
-         'Press 3 to repeat this ivoice mail again. Press 0 to go back to main menu.', 'voice-message-menu:' + index, next);
+    menu('Press 1 to go to the next voice mail. Press 2 to delete this voice mail and go to the next one.' +
+         'Press 3 to repeat this voice mail again. Press 0 to go back to main menu.', 'voice-message-menu:' + index, next);
   };
   var playVoiceMailMessage = function(index, callback){
     var message = req.user.voiceMessages[index];
     if(!message){
       return call.speakSentence('You have no voice messages', 'main-menu', callback);
     }
-    call.speakSentence(moment(message.startTime).format('MMMM Do YYYY, h:mm:ss a'), 'voice-message-date:' + index, callback);
+    call.speakSentence(moment(message.startTime).format('Do of MMMM YYYY h:mm:ss a'), 'voice-message-date:' + index, callback);
   }
   switch(req.body.eventType){
     case 'answer':
@@ -145,6 +145,9 @@ module.exports.admin = function(req, res, next){
             case '3':
               playVoiceMailMessage(index, next);
               break;
+            default:
+             voiceMessageMenu(index, next);
+             break;
           }
           break;
       }
@@ -218,6 +221,9 @@ module.exports.admin = function(req, res, next){
         req.user.save(next);
       });
       break;
+    default:
+      next();
+      break;
   }
 };
 
@@ -244,9 +250,13 @@ module.exports.externalCall = function(req, res, next){
       }
       req.user.playGreeting(call, next);
       break;
-//    case 'hangup':
-//      removeCallId(req, next);
-//      break;
+    case 'hangup':
+      setTimeout(function(){
+        debug("Removing call id");
+        removeCallId(req, function(){});
+      },900000);
+      next();
+      break;
     case 'playback':
     case 'speak':
       if(req.body.status != 'done'){
@@ -257,7 +267,7 @@ module.exports.externalCall = function(req, res, next){
           call.playAudio({fileUrl: req.makeAbsoluteUrl('/beep.mp3'), tag: 'start-recording' }, next);
           break;
         case 'start-recording':
-          call.recordingOn(function(err){
+          call.update({transcriptionEnabled: true, recordingEnabled: true}, function(err){
             if(err){
               return next(err);
             }
@@ -278,49 +288,46 @@ module.exports.externalCall = function(req, res, next){
         call.hangUp(next);
       }
       break;
-    case 'recording':
-      if(req.body.state !== 'complete') {
-        return next();
-      }
-      var recording = new bandwidth.Recording();
-      recording.client = req.client;
-      recording.id = req.body.recordingId;
-      recording.createTranscription(function(err, transcription){
-        if(err){
-          return next(err);
-        }
-        bandwidth.Call.get(req.client, req.body.callId, function(err, call){
-          if(err){
-            return next(err);
-          }
-          debugger;
-          req.User.update({_id: req.user.id}, {'$push': {'activeTranscriptions': {id: transcription.id, from: call.from}}}, next);
-        });
-      });
-      break;
+    //case 'recording':
+    //  var recording = new bandwidth.Recording();
+    //  recording.id = req.body.recordingId;
+    //  recording.client = req.client;
+    //  debug('creating a transcription');
+    //  recording.createTranscription(next);
+    //  next()
+    //  break;
     case 'transcription':
       if(req.body.state !== 'completed'){
         return next();
       }
       async.waterfall([
         function(callback){
-          req.User.findOne({'activeTranscriptions.id': req.body.transcriptionId}, callback);
+          bandwidth.Recording.get(req.client, req.body.recordingId, callback);
         },
-        function(user, callback){
-          if(!user){
-            return callback(new Error('Unknown transcription'));
-          }
-          bandwidth.Recording.get(req.client, req.body.recordingId, function(err, recording){
+        function(recording, callback){
+          var index = recording.call.lastIndexOf('/');
+          var callId = recording.call.substr(index + 1);
+          bandwidth.Call.get(req.client, callId, function(err, call){
             if(err){
               return callback(err);
             }
-            callback(null, user, recording);
+            callback(null, recording, call);
           });
         },
-        function(user, recording, callback){
-          var from = user.activeTranscriptions.filter(function(t){ return t.id === req.body.transcriptionId; })[0].from;
+        function(recording, call, callback){
+          req.User.findOne({activeCallIds: call.id}, function(err, user){
+            if(err){
+              return callback(err);
+            }
+            if(!user){
+              return callback(new Error("Missing user for call " + call.id));
+            }
+            callback(null, recording, call, user);
+          });
+        },
+        function(recording, call, user, callback){
+          var from = call.from;
           req.User.update({_id: user.id}, {
-            '$pull': {'activeTranscriptions': {id: req.body.transcriptionId}},
             '$push': {'voiceMessages': {url: recording.media, startTime: recording.startTime, endTime: recording.endTime}}
           }, function(err){
             if(err){
@@ -328,14 +335,13 @@ module.exports.externalCall = function(req, res, next){
             }
             req.sendEmail(user.email, 'TranscriptionApp - new voice message from ' + from,
                 '<p>You received a new voice message from <b>' + from +'</b> at ' + moment(recording.startTime).format('LLL') + ':</p>' +
-                '<p><pre>' + req.body.text + '</pre></p>' +
-                '<p>Click this link to read full text</p>' +
-                '<p><a href="' + req.body.textUrl + '">' + req.body.textUrl + '</a></p>' +
-                '<p>Click this link to listen to this message</p>' +
-                '<p><a href="' + recording.media + '">' + recording.media + '</a></p>', callback);
+                '<p><pre>' + req.body.text + '</pre></p>', callback);
           });
         }
       ], next);
+      break;
+    default:
+      next();
       break;
   }
 };
