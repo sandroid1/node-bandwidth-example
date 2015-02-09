@@ -1,7 +1,7 @@
 node-bandwidth-example
 ======================
 
-3 demos of Catapult API
+4 demos of Catapult API
 
 Dolphin app demonstrates how to play audio, speak text to callers, and gather DTMF from the caller.
 
@@ -9,10 +9,15 @@ Chaos Conference is a very simple conferencing app that joins users to a confere
 
 Sip App is simple application which allows to make calls directly to sip account, redirect outgoing calls from sip account to another number, redirect incoming calls from specific number to sip account. Also this application demonstrate how to receive/create an application, domain, endpoint, buy phone numbers.
 
+Transcription App is simple voice mail app which sends email notifications to user with transcripted message text. It demonstrates how to make calls, handle incoming calls to registered number, handle events, tune on call recording, create a transcription for recording. Also it shows how to register an application on catapult and buy new phone number.
+
+
 Before run them fill config file `options.json` with right values.
 Option `conferenceNumber` is required for chaosConfernce only.
 Options `caller` and `bridgeCallee` are used by dolphinApp only.
 Option `domain` should contains host name (and port) which will be used to access to the server from external network.
+
+`transcriptionApp` stores settings in own config.js. Please edit this file before run this demo.
 
 ### How to run
 
@@ -38,6 +43,13 @@ Run sipApp demo as
 
 ```
 node sipApp.js
+```
+
+Run transcriptionApp demo as
+
+```
+cd transcriptionApp
+node app.js
 ```
 
 Use environment variable `PORT` to change default port (3000) which will be used by these apps.
@@ -67,6 +79,9 @@ Open `package.json` in text editor and select which demo you would like to deplo
 
 // for Sip App
 "start": "node ./sipApp.js"
+
+// for Transcription  App
+"start": "node ./app.js"
 ```
 
 Then open `options.json` and fill it with valid values (except `domain`).

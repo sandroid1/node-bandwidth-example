@@ -11,6 +11,7 @@ var express = require('express'),
 var indexRouter = express.Router();
 
 
+//save url to return
 function saveReturnUrlIfNeed(req, res, next){
   if(req.query && req.query.next){
     debug('Save url to return %s', req.query.next);
@@ -19,10 +20,12 @@ function saveReturnUrlIfNeed(req, res, next){
   next();
 }
 
+//redirect to saved url to return
 function redirectToReturnUrl(req, res, next){
   res.redirect(req.session.returnUrl || '/'); //validate this url in real apps!!!
 }
 
+//set user data by call id to req.user
 function getUserByCallId(req, res, next){
   if(req.body && req.body.callId){
     req.User.findOne({activeCallIds: req.body.callId}, function(err, user){
@@ -38,6 +41,7 @@ function getUserByCallId(req, res, next){
   }
 }
 
+//handle errors
 function handleError(view){
   return function(err, req, res, next){
     debug('showing an error: %s', err.message);
@@ -46,6 +50,7 @@ function handleError(view){
   };
 }
 
+//allow anly authorized requests only
 function authOnly(req, res, next){
   if(req.user){
     next();
@@ -55,10 +60,12 @@ function authOnly(req, res, next){
   }
 }
 
+//all routes /events/XXXX should return nothing. use this function for that
 function sendEventResponse(req, res){
   res.send('');
 }
 
+//don't say to the bandwidth server about internal errors in /event/XXXX
 function handleEventError(err, req, res, next){
   console.error('Error on handling event on %s: %s', req.url, err.message);
   console.log(err.stack);

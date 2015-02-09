@@ -32,6 +32,8 @@ var app = express();
 var emailTransport = nodemailer.createTransport(config.email);
 
 var applicationId;
+
+//creating of new application on the bandwidth server if need
 function getOrCreateApplication(callback){
   bandwidth.Application.list(client, function(err, apps){
     if(err){
@@ -58,7 +60,7 @@ function getOrCreateApplication(callback){
 /**
  * Express configuration.
  */
-app.set('port', config.server.port);
+app.set('port', process.env.PORT || config.server.port);
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
@@ -72,16 +74,20 @@ app
   .use(express.static(path.join(__dirname, 'public')))
   .use(flash())
   .use(function(req, res, next){
-    req.User = User;
-    req.client = client;
-    res.locals.error = req.flash('error')[0];
-    res.locals.info = req.flash('info')[0];
+    req.User = User; //allow to get access to User model from route handlers
+    req.client = client; // access to client instance
+    res.locals.error = req.flash('error')[0]; //to show flash error
+    res.locals.info = req.flash('info')[0]; // and info alert
+    //build abso;ute url by relative url
     req.makeAbsoluteUrl = function(path){
       return (config.baseUrl || ('http://localhost:' + app.get('port'))) + path;
     };
+    //return application id (on bandwith server)
     req.getApplicationId = function(){
       return applicationId;
     };
+
+    // send email
     req.sendEmail = function(email, subject, html, callback){
       var data = {
         from: config.email.from,
@@ -92,12 +98,13 @@ app
       emailTransport.sendMail(data, callback);
     };
     if(req.session.userId){
+      //if user made sig in then request user info to req.user
       User.findById(req.session.userId, function(err, user){
         if(err){
           return next(err);
         }
         req.user = user;
-        res.locals.user = user;
+        res.locals.user = user; // allow to use user's data from views
         next();
       });
     }

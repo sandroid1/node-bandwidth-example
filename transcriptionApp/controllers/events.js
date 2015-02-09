@@ -3,6 +3,7 @@ var bandwidth = require('node-bandwidth');
 var moment = require('moment');
 var async = require('async');
 
+//save call id to db (its allow to find user by call id in future)
 function saveCallId(req, field, callback){
   req.User.findOne({phoneNumber: req.body[field]}, function(err, user){
     if(err){
@@ -16,6 +17,7 @@ function saveCallId(req, field, callback){
   });
 }
 
+//remove callId from user
 function removeCallId(req, callback){
   if(!req.user){
     return callback();
@@ -24,6 +26,10 @@ function removeCallId(req, callback){
 }
 
 
+
+
+// handler of POST /event/admin
+// its used to make call back call from registered phone number to listen to voice mails and change greeting
 module.exports.admin = function(req, res, next){
   debug('admin: %j', req.body);
   var call = new bandwidth.Call();
@@ -72,7 +78,7 @@ module.exports.admin = function(req, res, next){
           return call.hangUp(next);
         }
         setTimeout(function(){
-          mainMenu(next);
+          mainMenu(next); //play main menu on answer
         }, 2000);
       });
       break;
@@ -86,6 +92,7 @@ module.exports.admin = function(req, res, next){
       var tag = (req.body.tag || '').split(':');
       switch(tag[0]){
         case 'recording':
+          // stop recording
           call.recordingOff(function(err){
             if(err){
               return next(err);
@@ -228,6 +235,8 @@ module.exports.admin = function(req, res, next){
   }
 };
 
+// handler of POST /events/externalCall
+// It handles all incoming calls to registered number, records voice mail and send transcription to user by email
 module.exports.externalCall = function(req, res, next){
   debug('externalCall: %j', req.body);
   var call = new bandwidth.Call();
@@ -240,7 +249,7 @@ module.exports.externalCall = function(req, res, next){
           return next(err);
         }
         if(!req.user){
-          return call.rejectIncoming(next);
+          return call.rejectIncoming(next); //reject all calls to not registered numbers
         }
         call.answerOnIncoming(next);
       });
@@ -249,12 +258,12 @@ module.exports.externalCall = function(req, res, next){
       if(!req.user){
         return call.hangUp(next);
       }
-      req.user.playGreeting(call, next);
+      req.user.playGreeting(call, next); //play user's greeting
       break;
     case 'hangup':
       setTimeout(function(){
         debug('Removing call id');
-        removeCallId(req, function(){});
+        removeCallId(req, function(){}); //allow to 'transcription' event to find user by callId (it can be called after hangup)
       },900000);
       next();
       break;
@@ -265,13 +274,15 @@ module.exports.externalCall = function(req, res, next){
       }
       switch(req.body.tag){
         case 'greeting':
-          call.playAudio({fileUrl: req.makeAbsoluteUrl('/beep.mp3'), tag: 'start-recording' }, next);
+          call.playAudio({fileUrl: req.makeAbsoluteUrl('/beep.mp3'), tag: 'start-recording' }, next); //play 'beep' after greeting
           break;
         case 'start-recording':
+          //start recording of call after 'beep' (with transcription of result)
           call.update({transcriptionEnabled: true, recordingEnabled: true}, function(err){
             if(err){
               return next(err);
             }
+            //press any key to stop recording (and call too)
             call.createGather({
               tag: 'stop-recording',
               interDigitTimeout: 30,
@@ -285,6 +296,7 @@ module.exports.externalCall = function(req, res, next){
       if(req.body.state !== 'completed'){
         return next();
       }
+      //make hangup on press any key
       if(req.body.tag === 'stop-recording'){
         call.hangUp(next);
       }
@@ -301,6 +313,7 @@ module.exports.externalCall = function(req, res, next){
       if(req.body.state !== 'completed'){
         return next();
       }
+      //call was recorded and transcription was completed here
       async.waterfall([
         function(callback){
           bandwidth.Recording.get(req.client, req.body.recordingId, callback);
@@ -328,12 +341,14 @@ module.exports.externalCall = function(req, res, next){
         },
         function(recording, call, user, callback){
           var from = call.from;
+          //add new voice message to user
           req.User.update({_id: user.id}, {
             '$push': {'voiceMessages': {url: recording.media, startTime: recording.startTime, endTime: recording.endTime}}
           }, function(err){
             if(err){
               return callback(err);
             }
+            //and send email notification
             req.sendEmail(user.email, 'TranscriptionApp - new voice message from ' + from,
                 '<p>You received a new voice message from <b>' + from +'</b> at ' + moment(recording.startTime).format('LLL') + ':</p>' +
                 '<p><pre>' + req.body.text + '</pre></p>', callback);

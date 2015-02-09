@@ -2,6 +2,8 @@ var mongoose = require('mongoose');
 var bandwidth = require('node-bandwidth');
 var Schema = mongoose.Schema;
 
+//User model
+
 var userSchema = new Schema({
   email: {type: String, index:{ unique: true }, required: true},
   password: String, //don't do that in real apps
