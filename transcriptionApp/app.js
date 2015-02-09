@@ -20,7 +20,7 @@ var express        = require('express'),
     User           = require('./models/user'),
     bandwidth      = require('node-bandwidth');
 
-var APPLICATION_NAME = 'TranscriptionApp'
+var APPLICATION_NAME = 'TranscriptionApp';
 
 var client = new bandwidth.Client(config.catapult);
 mongoose.connect(config.database.url);
@@ -83,7 +83,7 @@ app
       return applicationId;
     };
     req.sendEmail = function(email, subject, html, callback){
-      data = {
+      var data = {
         from: config.email.from,
         to: email,
         subject: subject,

@@ -61,7 +61,7 @@ module.exports.admin = function(req, res, next){
       return call.speakSentence('You have no voice messages', 'main-menu', callback);
     }
     call.speakSentence(moment(message.startTime).format('Do of MMMM YYYY h:mm:ss a'), 'voice-message-date:' + index, callback);
-  }
+  };
   switch(req.body.eventType){
     case 'answer':
       saveCallId(req, 'from', function(err){
@@ -80,7 +80,7 @@ module.exports.admin = function(req, res, next){
       removeCallId(req, next);
       break;
     case 'gather':
-      if(req.body.state != 'completed'){
+      if(req.body.state !== 'completed'){
         return next();
       }
       var tag = (req.body.tag || '').split(':');
@@ -151,12 +151,13 @@ module.exports.admin = function(req, res, next){
           }
           break;
       }
+      break;
     case 'playback':
     case 'speak':
-      if(req.body.status != 'done'){
+      if(req.body.status !== 'done'){
         return next();
       }
-      var tag = (req.body.tag || '').split(':');
+      tag = (req.body.tag || '').split(':');
       switch(tag[0]){
         case 'start-recording':
           call.recordingOn(function(err){
@@ -252,14 +253,14 @@ module.exports.externalCall = function(req, res, next){
       break;
     case 'hangup':
       setTimeout(function(){
-        debug("Removing call id");
+        debug('Removing call id');
         removeCallId(req, function(){});
       },900000);
       next();
       break;
     case 'playback':
     case 'speak':
-      if(req.body.status != 'done'){
+      if(req.body.status !== 'done'){
         return next();
       }
       switch(req.body.tag){
@@ -279,12 +280,12 @@ module.exports.externalCall = function(req, res, next){
           });
           break;
       }
-      break
+      break;
     case 'gather':
-      if(req.body.state != 'completed'){
-        return next(err);
+      if(req.body.state !== 'completed'){
+        return next();
       }
-      if(req.body.tag == 'stop-recording'){
+      if(req.body.tag === 'stop-recording'){
         call.hangUp(next);
       }
       break;
@@ -320,7 +321,7 @@ module.exports.externalCall = function(req, res, next){
               return callback(err);
             }
             if(!user){
-              return callback(new Error("Missing user for call " + call.id));
+              return callback(new Error('Missing user for call ' + call.id));
             }
             callback(null, recording, call, user);
           });
