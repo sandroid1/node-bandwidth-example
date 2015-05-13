@@ -100,3 +100,32 @@ Change option `domain` in options.json by assigned by Heroku value (something li
 Run `git push heroku master` to deploy this project.
 
 Run `heroku open` to see home page of the app in the browser
+
+### Open external access via ngrock
+
+As alternative to deployment to external hosting you can open external access to local web server via [ngrock](https://ngrok.com/).
+
+First instal ngrock on your computer. Run ngrock by
+
+
+```
+ngrok http 3000 #you can use another free port if need 
+```
+
+You will see url like http://XXXXXXX.ngrok.io on console output. Open `options.json` and fill value `domain` by value from console (i.e. like XXXXXXX.ngrock.io). Save changes and run demo app by
+
+
+```
+# for Chaos Conference
+PORT=3000 node ./chaos_conference.js
+
+# for Dolpin App
+PORT=3000 node ./dolphin_app.js
+
+# for Sip App
+PORT=3000 node ./sip_app.js
+
+# for transcription app
+PORT=3000 node ./app.js
+```
+
