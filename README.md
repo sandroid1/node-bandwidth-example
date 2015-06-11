@@ -13,10 +13,11 @@ Transcription App is simple voice mail app which sends email notifications to us
 
 
 Before run them fill config file `options.json` with right values.
+
+Option `domain` should contain host name (and port) which will be used to access to the server from external network.
 Option `conferenceNumber` is required for chaosConfernce only.
 Options `caller` and `bridgeCallee` are used by dolphinApp only.
-Option `domain` should contains host name (and port) which will be used to access to the server from external network.
-
+Option `spiDomain` is required for sipApp only. It should be a domain name with at most 16 characters.
 `transcriptionApp` stores settings in own config.js. Please edit this file before run this demo.
 
 ### How to run
@@ -49,6 +50,7 @@ Run transcriptionApp demo as
 
 ```
 cd transcriptionApp
+npm install (first time only)
 node app.js
 ```
 
@@ -62,7 +64,7 @@ curl -d '{"to": "+YOUR-NUMBER"}' http://YOUR-DOMAIN/start/demo --header "Content
 
 For Chaos conference run this command again with another number to it to the conference (first member is owner)
 
-For Sip app open home page in browser first (http://domain)  and follow instructions on it
+For Sip app open home page in browser first (http://domain) and follow instructions on it. There is one caveat as when this app create its domain, this will take around 10 minutes to be available for use in your SIP client.
 
 ### Deploy on heroku
 
@@ -99,7 +101,9 @@ Change option `domain` in options.json by assigned by Heroku value (something li
 
 Run `git push heroku master` to deploy this project.
 
-Run `heroku open` to see home page of the app in the browser
+Run `heroku open` to see home page of the app in the browser.
+
+Run `heroku logs --tail` for debugging.
 
 ### Open external access via ngrock
 

@@ -110,7 +110,7 @@ app.post("/events/demo", function(req, res, next){
           terminatingDigits:  "*",
           interDigitTimeout: "3",
           prompt: {
-            sentence: "Press 1 to speak with the fish, press 2 to let it go",
+            sentence: "Press 1 to speak with the dolphin, press 2 to let it go",
             loopEnabled: false,
             voice: "Kate"
           },
@@ -161,7 +161,7 @@ app.post("/events/bridged", function(req, res, next){
     case "hangup":
       call.id = otherCallId;
       if(ev.cause == "CALL_REJECTED"){
-         call.speakSentence("We are sorry, the user is reject your call", "terminating", done);
+         call.speakSentence("We are sorry, the user rejected your call", "terminating", done);
       }
       else{
          call.hangUp(done);

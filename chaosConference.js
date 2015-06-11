@@ -114,7 +114,7 @@ app.post("/events/other_call_events", function(req, res, next){
   switch(ev.eventType){
     case "answer":
       if(conferenceId){
-        call.speakSentence("You will be join to conference.", "conference:" +  conferenceId, done);
+        call.speakSentence("You will join the conference.", "conference:" +  conferenceId, done);
       }
       else{
         call.speakSentence("We are sorry, the conference is not active.", "terminating", done);

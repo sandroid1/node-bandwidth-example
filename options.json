@@ -3,7 +3,8 @@
   "apiToken": "api-token-value",
   "apiSecret": "api-secret-value",
   "conferenceNumber": "+1-number-from-bandwidth",
-  "domain": "host-and-port-of-this-app",
+  "domain": "callback-url-for-this-app(E.g.: 'abcdefg.ngrok.io', in this exact format, without 'http://' or ending '/'",
   "caller": "+1-number-from-bandwidth(you can use same number with conference_number)",
   "bridgeCallee": "+1-number-which-can-receive-a-call"
+  "sipDomain": "sip-domain-from-your-bandwidth-account"
 }
