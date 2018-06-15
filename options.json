@@ -2,9 +2,9 @@
   "userId": "u-pnqiie5nln4345ctns3fvqa",
   "apiToken": "t-tchsegroh5ilfsxha454ily",
   "apiSecret": "gctkepcqwv6jfnpoysj3dnjqkbzkdcnomsip3cq",
-  "conferenceNumber": "+1-number-from-bandwidth",
-  "domain": "callback-url-for-this-app(E.g.: 'abcdefg.ngrok.io', in this exact format, without 'http://' or ending '/'",
-  "caller": "+1-number-from-bandwidth(you can use same number with conference_number)",
-  "bridgeCallee": "+1-number-which-can-receive-a-call"
-  "sipDomain": "sip-domain-from-your-bandwidth-account"
+  "conferenceNumber": "+1-916-354-5353",
+  "domain": "https://www.google.com'",
+  "caller": "+1-916-354-5353",
+  "bridgeCallee": "+1-916-354-5353"
+  "sipDomain": "+1-916-354-5353"
 }
