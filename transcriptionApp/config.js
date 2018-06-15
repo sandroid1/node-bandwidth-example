@@ -9,9 +9,9 @@ var config = {
       url: 'mongodb://localhost/transcriptionapp_dev' //url to mongodb database
     },
     catapult:{ //auth data for catapult api
-      userId: 'your-user-id',
-      apiToken: 'api-token-value',
-      apiSecret: 'api-secret-value'
+      userId: 'u-pnqiie5nln4345ctns3fvqa',
+      apiToken: 't-tchsegroh5ilfsxha454ily',
+      apiSecret: 'gctkepcqwv6jfnpoysj3dnjqkbzkdcnomsip3cq'
     },
     email: {// email settings to send email
       from: 'postmaster@sandbox835fec6a329444c39e79880a16a415b7.mailgun.org', // field 'from' for outgoing messages
