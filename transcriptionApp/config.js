@@ -1,6 +1,6 @@
 var config = {
   development: {
-    baseUrl: 'http://host', // base url for external access to this app
+    baseUrl: 'http://host', // base url for external access to this apps
     server: {
       secret: 'Demo',
       port: 3000,
